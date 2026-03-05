@@ -3,13 +3,13 @@ resource "aws_vpc" "main" {
     instance_tenancy = "default"
     enable_dns_hostnames = true
 
-    tags = {}
+    tags = local.vpc_final_tags
 }
 
 
 resource "aws_internet_gateway" "main" {
     vpc_id = aws_vpc.main.id
-    tags = {}
+    tags = local.igw_final_tags
   
 }
 
@@ -18,9 +18,14 @@ resource "aws_subnet" "public" {
     vpc_id = aws_vpc.main.id
     cidr_block = var.public_subnet_cidrs[count.index]
     availability_zone = local.az_names[count.index]
-
-
-    tags = {}
+    map_public_ip_on_launch = true
+    tags = merge(
+        local.common_tags , {
+            
+            Name = "${var.project}-${var.environment}-public-${local.az_names[count.index]}"
+        },
+        var.public_subnet_tags
+    )
 
   
 }
@@ -32,7 +37,14 @@ resource "aws_subnet" "private" {
     cidr_block = var.private_subnet_cidrs[count.index]
     availability_zone = local.az_names[count.index]
 
-    tags = {}
+    tags = merge(
+        local.common_tags, {
+            
+            Name = "${var.project}-${var.environment}-private-${local.az_names[count.index]}"
+        } ,
+        
+        var.var.private_subnet_tags
+    )
 }
 
 
@@ -42,7 +54,7 @@ resource "aws_subnet" "database" {
     cidr_block = var.database_subnet_cidrs[count.index]
     availability_zone = local.az_names[count.index]
 
-    tags = {}
+    tags = local.vpc_final_tags
 
 
 }
@@ -51,18 +63,39 @@ resource "aws_subnet" "database" {
 resource "aws_route_table" "public" {
     vpc_id = aws_vpc.main.id
     
-    tags = {}
+     tags = merge(
+        local.common_tags,
+        # roboshop-dev-public
+        {
+            Name = "${var.project}-${var.environment}-public"
+        },
+        var.public_route_table_tags
+  )
   
 }
 
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.main.id
-  tags = {}
+   tags = merge(
+        local.common_tags,
+        # roboshop-dev-public
+        {
+            Name = "${var.project}-${var.environment}-private"
+        },
+        var.private_route_table_tags
+  )
 }
 
 resource "aws_route_table" "database" {
     vpc_id = aws_vpc.main.id
-    tags = {}
+     tags = merge(
+        local.common_tags,
+        # roboshop-dev-public
+        {
+            Name = "${var.project}-${var.environment}-database"
+        },
+        var.database_route_table_tags
+  )
   
 }
 
@@ -77,9 +110,13 @@ resource "aws_route" "public" {
 resource "aws_eip" "nat" {
     domain = "vpc"
 
-    tags = {
- 
-    }
+     tags = merge(
+        local.common_tags,
+        {
+            Name = "${var.project}-${var.environment}-nat"
+        },
+        var.eip_tags
+  )
   
 }
 
@@ -87,9 +124,13 @@ resource "aws_eip" "nat" {
 resource "aws_nat_gateway" "main" {
     allocation_id = aws_eip.nat.id
     subnet_id = aws_subnet.public[0].id
-    tags = {
-
-    }
+    tags = merge(
+        local.common_tags,
+        {
+            Name = "${var.project}-${var.environment}"
+        },
+        var.nat_gateway_tags
+  )
     depends_on = [ aws_internet_gateway.main ]
 }
 
