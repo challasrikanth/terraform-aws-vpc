@@ -56,7 +56,7 @@ resource "aws_route_table" "public" {
 }
 
 resource "aws_route_table" "private" {
-  vpc_id = aws.vpc_id
+  vpc_id = aws_vpc.main.id
   tags = {}
 }
 
@@ -86,7 +86,7 @@ resource "aws_eip" "nat" {
 
 resource "aws_nat_gateway" "main" {
     allocation_id = aws_eip.nat.id
-    subnet_id = aws_subnet.public.id
+    subnet_id = aws_subnet.public[0].id
     tags = {
 
     }
@@ -101,7 +101,7 @@ resource "aws_route" "private" {
 }
 
 resource "aws_route" "database" {
-    route_table_id = aws_subnet.database.id
+    route_table_id = aws_subnet.database[count.index].id
     destination_cidr_block = "0.0.0.0/0"
     nat_gateway_id = aws_internet_gateway.main.id 
 }
